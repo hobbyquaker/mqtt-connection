@@ -1,0 +1,26 @@
+{
+  "name": "mqtt-connection",
+  "authors": [
+    "Sebastian Raff <hq@ccu.io>"
+  ],
+  "description": "Polymer Element that connects to a MQTT broker",
+  "main": "mqtt-connection.html",
+  "keywords": [
+    "web-component",
+    "web-components",
+    "polymer",
+    "mqtt"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/hobbyquaker/mqtt-connection",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^2.0.0"
+  }
+}
