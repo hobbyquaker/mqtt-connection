@@ -96,6 +96,7 @@
                 const that = this;
 
                 this.__subscriptions = {};
+                this.__subscriptionId = 0;
                 const clientIdSuffix = '_' + ('00000000' + Math.floor(Math.random() * 0xffffffff).toString(16)).slice(-8);
                 this.__mqttClient = new Paho.MQTT.Client(this.host, this.port, this.clientId + clientIdSuffix);
 
@@ -148,7 +149,8 @@
                 this.__mqttClient.onMessageArrived = msg => {
                     Object.keys(that.__subscriptions).forEach(topic => {
                         if (topic === msg.destinationName) {
-                            that.__subscriptions[topic].forEach(callback => {
+                            Object.keys(that.__subscriptions[topic]).forEach(id => {
+                                const callback = that.__subscriptions[topic][id].callback;
                                 callback(msg.payloadString);
                             });
                         }
@@ -189,16 +191,30 @@
 
             /**
              *
-             * @param topic
-             * @param callback
              */
             subscribe(topic, callback) {
+                this.__subscriptionId += 1;
                 if (this.__subscriptions[topic]) {
-                    this.__subscriptions[topic].push(callback);
+                    this.__subscriptions[topic]['s' + this.__subscriptionId] = {callback};
                 } else {
-                    this.__subscriptions[topic] = [callback];
+                    this.__subscriptions[topic] = {};
+                    this.__subscriptions[topic]['s' + this.__subscriptionId] = {callback};
                     if (this.connected) {
                         this.__mqttClient.subscribe(topic);
+                    }
+                }
+                return {id: this.__subscriptionId, topic};
+            }
+
+            /**
+             *
+             */
+            unsubscribe(subscription) {
+                if (this.__subscriptions[subscription.topic]) {
+                    delete this.__subscriptions[subscription.topic]['s' + subscription.id];
+                    if (Object.keys(this.__subscriptions[subscription.topic]).length === 0) {
+                        this.__mqttClient.unsubscribe(subscription.topic);
+                        delete this.__subscriptions[subscription.topic];
                     }
                 }
             }
