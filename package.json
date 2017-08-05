@@ -1,6 +1,6 @@
 {
   "name": "mqtt-connection",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Polymer Element that connects to a MQTT broker",
   "repository": {
