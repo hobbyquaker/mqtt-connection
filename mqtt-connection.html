@@ -49,6 +49,9 @@
                         type: String,
                         value: 'polymer'
                     },
+                    /**
+                     *  Seconds.
+                     */
                     keepAliveInterval: {
                         type: Number,
                         value: 10
@@ -78,7 +81,9 @@
                         type: Number,
                         value: 1
                     },
-
+                    /**
+                     * Topic for the Last-Will/Testament action (published by the broker after this client disconnected).
+                     */
                     willTopic: {
                         type: String
                     },
@@ -190,7 +195,9 @@
             }
 
             /**
-             *
+             *  @param {string} topic
+             *  @param {function} callback
+             *  @returns {subscriptionId} subscriptionId
              */
             subscribe(topic, callback) {
                 this.__subscriptionId += 1;
@@ -207,7 +214,10 @@
             }
 
             /**
+             *  Unsubscribe from a previously subscribed topic. Supply the subscriptionId returned by the subscribe
+             *  method.
              *
+             *  @param {subscriptionId} subscriptionId
              */
             unsubscribe(subscription) {
                 if (this.__subscriptions[subscription.topic]) {
