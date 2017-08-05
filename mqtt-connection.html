@@ -1,156 +1,209 @@
 <link rel="import" href="../polymer/polymer-element.html">
-<link rel="import" href="./paho.mqtt.javascript/1.0.4/paho-mqtt.js">
 
-<script>
-    class MqttConnection extends Polymer.Element {
+<dom-module id="mqtt-connection">
+    <script src="./paho.mqtt.javascript/1.0.4/paho-mqtt.js"></script>
 
-        static get properties() {
-            return {
-                host: {
-                    type: String
-                },
-                port: {
-                    type: Number
-                },
-                protocol: {
-                    type: String,
-                    value: 'ws'
-                },
-                username: {
-                    type: String
-                },
-                password: {
-                    type: String
-                },
-                clientId: {
-                    type: String,
-                    value: 'polymer'
-                },
-                connected: {
-                    type: Boolean,
-                    reflectToAttribute: true,
-                    readOnly: true,
-                    notify: true,
-                    value: false
-                },
-                reconnectTimeout: {
-                    type: Number,
-                    value: 500
+    <script>
+        /**
+         * `mqtt-connection` Creates a Connection to the MQTT Broker. Automatically (re)connects and handles
+         * subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
+         *
+         * @customElement
+         * @polymer
+         */
+        class MqttConnection extends Polymer.Element {
+            static get is() { return 'mqtt-connection'; }
+            static get properties() {
+                return {
+                    /**
+                     *  Hostname or IP Address of the MQTT Broker.
+                     */
+                    host: {
+                        type: String
+                    },
+                    /**
+                     *  Port Number of the MQTT Broker.
+                     */
+                    port: {
+                        type: Number
+                    },
+                    /**
+                     * The protocol to use for the connection to the MQTT Broker. Has to be `ws` or `wss`.
+                     */
+                    protocol: {
+                        type: String,
+                        value: 'ws'
+                    },
+                    username: {
+                        type: String,
+                        value: ''
+                    },
+                    password: {
+                        type: String,
+                        value: ''
+                    },
+                    /**
+                     *  The MQTT Client id. Will be suffixed with a random 8 digit hex number.
+                     */
+                    clientId: {
+                        type: String,
+                        value: 'polymer'
+                    },
+                    keepAliveInterval: {
+                        type: Number,
+                        value: 10
+                    },
+
+                    /**
+                     * Indicates if connected to the mqtt broker.
+                     */
+                    connected: {
+                        type: Boolean,
+                        readOnly: true,
+                        notify: true,
+                        value: false,
+                        reflectToAttribute: true
+                    },
+                    /**
+                     * Fired when `mqtt-connection` changes its connected state.
+                     *
+                     * @event connected-changed
+                     * @param {boolean} Indicates if connected to the mqtt broker.
+                     */
+
+                    /**
+                     *  Seconds to wait between connection retries.
+                     */
+                    reconnectInterval: {
+                        type: Number,
+                        value: 1
+                    },
+
+                    willTopic: {
+                        type: String
+                    },
+                    willPayload: {
+                        type: String
+                    },
+                    willRetain: {
+                        type: Boolean
+                    }
                 }
             }
-        }
 
-        connectedCallback() {
-            super.connectedCallback();
-            const that = this;
+            connectedCallback() {
+                super.connectedCallback();
+                const that = this;
 
-            this.subscriptions = {};
+                this.__subscriptions = {};
+                const clientIdSuffix = '_' + ('00000000' + Math.floor(Math.random() * 0xffffffff).toString(16)).slice(-8);
+                this.__mqttClient = new Paho.MQTT.Client(this.host, this.port, this.clientId + clientIdSuffix);
 
-            const clientIdSuffix = '_' + ('00000000' + Math.floor(Math.random() * 0xffffffff).toString(16)).slice(-8);
-
-            this.mqttClient = new Paho.MQTT.Client(this.host, this.port, this.clientId + clientIdSuffix);
-
-            const connect = () => {
-                console.log('mqtt trying to connect', this.host, 'port', this.port);
-                this.mqttClient.connect({
+                const connectOptions = {
                     userName: that.username,
                     password: that.password,
+                    cleanSession: true,
                     useSSL: that.protocol === 'wss',
+                    keepAliveInterval: that.keepAliveInterval,
                     onSuccess: () => {
-                        console.log('mqtt connected');
-                        this.connected = true;
-                        this.dispatchEvent(new CustomEvent('connected-changed', {
-                            detail: {connected: true},
-                            bubbles: true,
-                            composed: true
-                        }));
-                        Object.keys(that.subscriptions).forEach(topic => {
-                            console.log('subscribe', topic);
-                            this.mqttClient.subscribe(topic);
+                        that._setConnected(true);
+
+                        Object.keys(that.__subscriptions).forEach(topic => {
+                            this.__mqttClient.subscribe(topic);
                         });
                     },
                     onFailure: (err) => {
-                        console.log('mqtt connection failure');
-                        this.dispatchEvent(new CustomEvent('failure', {
-                            detail: {errorCode, errorMessage},
+                        /**
+                         * Fired on MQTT connection failures
+                         *
+                         * @event failure
+                         * @param {object} contains errorCode and errorMessage
+                         */
+                        that.dispatchEvent(new CustomEvent('failure', {
+                            detail: {errorCode: err.errorCode, errorMessage: err.errorMessage},
                             bubbles: true,
                             composed: true
                         }));
-
-                        console.log('reconnect in', that.reconnectTimeout);
-                        setTimeout(connect, that.reconnectTimeout);
+                        setTimeout(connect, that.reconnectInterval * 1000);
                     }
-                });
-            };
+                };
 
-            connect();
-
-            this.mqttClient.onConnectionLost = responseObject => {
-                this.connected = false;
-                this.dispatchEvent(new CustomEvent('connected-changed', {
-                    detail: {connected: false},
-                    bubbles: true,
-                    composed: true
-                }));
-
-                if (responseObject.errorCode !== 0) {
-                    console.log('onConnectionLost:' + responseObject.errorMessage);
+                if (typeof this.willTopic !== 'undefined') {
+                    connectOptions.willMessage = new Paho.MQTT.Message(String(this.willPayload));
+                    connectOptions.willMessage.destinationName = this.willTopic;
+                    connectOptions.willMessage.retained = Booelan(this.willRetain);
                 }
-                console.log('reconnect in', this.reconnectTimeout);
-                setTimeout(connect, this.reconnectTimeout);
-            };
 
-            this.mqttClient.onMessageArrived = msg => {
-                console.log('<', msg.destinationName, msg.payloadString);
-                Object.keys(that.subscriptions).forEach(topic => {
-                    if (topic === msg.destinationName) {
-                        that.subscriptions[topic].forEach(callback => {
-                            callback(msg.payloadString);
-                        });
-                    }
-                });
-            };
-        }
+                const connect = () => {
+                    this.__mqttClient.connect(connectOptions);
+                };
 
-        publish(topic, payload, options, callback) {
+                connect();
 
-            if (typeof options === 'function') {
-                callback = options;
-                options = {};
-            } else if (typeof options !== 'object') {
-                options = {}
+                this.__mqttClient.onConnectionLost = responseObject => {
+                    that._setConnected(false);
+                    setTimeout(connect, this.reconnectInterval);
+                };
+
+                this.__mqttClient.onMessageArrived = msg => {
+                    Object.keys(that.__subscriptions).forEach(topic => {
+                        if (topic === msg.destinationName) {
+                            that.__subscriptions[topic].forEach(callback => {
+                                callback(msg.payloadString);
+                            });
+                        }
+                    });
+                };
             }
 
-            if (this.connected) {
-                if (typeof payload === 'object') {
-                    payload = JSON.stringify(payload);
-                } else if (typeof payload !== 'string') {
-                    payload = String(payload);
+            /**
+             *
+             * @param topic
+             * @param payload
+             * @param options
+             * @param callback
+             */
+            publish(topic, payload, options, callback) {
+                if (typeof options === 'function') {
+                    callback = options;
+                    options = {};
+                } else if (typeof options !== 'object') {
+                    options = {}
                 }
-                this.mqttClient.send(topic, payload, parseInt(options.qos, 10) || 0, Boolean(options.retain));
-                console.log('>', topic, payload);
-                if (typeof callback === 'function') {
-                    callback(null);
-                }
-            } else {
-                if (typeof callback === 'function') {
-                    callback(new Error('not connected'));
-                }
-            }
-        }
-
-        subscribe(topic, callback) {
-            if (this.subscriptions[topic]) {
-                this.subscriptions[topic].push(callback);
-            } else {
-                this.subscriptions[topic] = [callback];
                 if (this.connected) {
-                    console.log('subscribe', topic);
-                    this.mqttClient.subscribe(topic);
+                    if (typeof payload === 'object') {
+                        payload = JSON.stringify(payload);
+                    } else if (typeof payload !== 'string') {
+                        payload = String(payload);
+                    }
+                    this.__mqttClient.send(topic, payload, parseInt(options.qos, 10) || 0, Boolean(options.retain));
+                    if (typeof callback === 'function') {
+                        callback(null);
+                    }
+                } else {
+                    if (typeof callback === 'function') {
+                        callback(new Error('not connected'));
+                    }
+                }
+            }
+
+            /**
+             *
+             * @param topic
+             * @param callback
+             */
+            subscribe(topic, callback) {
+                if (this.__subscriptions[topic]) {
+                    this.__subscriptions[topic].push(callback);
+                } else {
+                    this.__subscriptions[topic] = [callback];
+                    if (this.connected) {
+                        this.__mqttClient.subscribe(topic);
+                    }
                 }
             }
         }
-    }
 
-    customElements.define('mqtt-connection', MqttConnection);
-</script>
+        customElements.define(MqttConnection.is, MqttConnection);
+    </script>
+</dom-module>

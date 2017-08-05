@@ -911,7 +911,7 @@ var PahoMQTT = (function (global) {
 						errorMessage:format(ERROR.SUBSCRIBE_TIMEOUT)}]);
 		}
 
-		// All subscriptions return a SUBACK.
+		// All __subscriptions return a SUBACK.
 		this._requires_ack(wireMessage);
 		this._schedule_message(wireMessage);
 	};
@@ -2110,7 +2110,7 @@ var PahoMQTT = (function (global) {
 		 *     			<dt>2 Exactly once.
 		 * 		</dl>
 		 * @param {Boolean} retained If true, the message is to be retained by the server and delivered
-		 *                     to both current and future subscriptions.
+		 *                     to both current and future __subscriptions.
 		 *                     If false the server only delivers the message to current subscribers, this is the default for new Messages.
 		 *                     A received message has the retained boolean set to true if the message was published
 		 *                     with the retained boolean set to true
@@ -2161,7 +2161,7 @@ var PahoMQTT = (function (global) {
 		 *     			<dt>2 Exactly once.
 		 * 		</dl>
 		 * @param {Boolean} retained If true, the message is to be retained by the server and delivered
-		 *                     to both current and future subscriptions.
+		 *                     to both current and future __subscriptions.
 		 *                     If false the server only delivers the message to current subscribers, this is the default for new Messages.
 		 *                     A received message has the retained boolean set to true if the message was published
 		 *                     with the retained boolean set to true
@@ -2304,7 +2304,7 @@ var PahoMQTT = (function (global) {
 	 * </dl>
 	 * <p>
 	 * @property {Boolean} retained If true, the message is to be retained by the server and delivered
-	 *                     to both current and future subscriptions.
+	 *                     to both current and future __subscriptions.
 	 *                     If false the server only delivers the message to current subscribers, this is the default for new Messages.
 	 *                     A received message has the retained boolean set to true if the message was published
 	 *                     with the retained boolean set to true
