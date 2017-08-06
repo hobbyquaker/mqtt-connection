@@ -8,14 +8,9 @@ Polymer Element that connects to a MQTT broker. Automatically (re)connects and h
 Uses the Eclipse Paho JavaScript client.
 
 
-## Installation
+## Documentation
 
-`bower install hobbyquaker/mqtt-connection`
-
-
-## Usage
-
-`<mqtt-connection host="mqtt-broker" port="8080"></mqtt-connection>`
+see https://www.webcomponents.org/element/hobbyquaker/mqtt-connection/elements/mqtt-connection
 
 
 ## License
@@ -23,4 +18,4 @@ Uses the Eclipse Paho JavaScript client.
 MIT (c) Sebastian Raff
 
 [shield-license]: https://img.shields.io/badge/license-MIT-blue.svg "License: MIT"
-[shield-polymer]: https://img.shields.io/badge/polymer%20version-2.0-green.svg "Polymer Version: 2.0"
+[shield-polymer]: https://img.shields.io/badge/polymer%20version-2.0-blue.svg "Polymer Version: 2.0"
