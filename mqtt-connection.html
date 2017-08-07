@@ -53,10 +53,16 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
                         type: String,
                         value: 'ws'
                     },
+                    /**
+                     * Authentication username
+                     */
                     username: {
                         type: String,
                         value: ''
                     },
+                    /**
+                     *  Authentication Password
+                     */
                     password: {
                         type: String,
                         value: ''
@@ -106,13 +112,40 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
                     willTopic: {
                         type: String
                     },
+                    /**
+                     * Payload for the Last-Will/Testament action.
+                     */
                     willPayload: {
                         type: String
                     },
+                    /**
+                     * Retain flag for the Last-Will/Testament action.
+                     */
                     willRetain: {
                         type: Boolean
                     }
                 }
+            }
+
+            __mqttMatch(topic, wildcard) {
+                if (topic === wildcard) {
+                    return true;
+                }
+
+                const t = String(topic).split('/');
+                const lt = t.length;
+                const w = String(wildcard).split('/');
+                const lw = w.length;
+
+                let i = 0;
+                for (; i < lt; i++) {
+                    if (t[i] !== w[i] && w[i] !== '+' && w[i] !== '#') {
+                        return false;
+                    } else if (w[i] === '#') {
+                        return true;
+                    }
+                }
+                return i === lw;
             }
 
             connectedCallback() {
@@ -122,9 +155,8 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
                 this.__subscriptions = {};
                 this.__subscriptionId = 0;
                 const clientIdSuffix = '_' + ('00000000' + Math.floor(Math.random() * 0xffffffff).toString(16)).slice(-8);
-                this.__mqttClient = new Paho.MQTT.Client(this.host, this.port, this.clientId + clientIdSuffix);
 
-                const connectOptions = {
+                this.__connectOptions = {
                     userName: that.username,
                     password: that.password,
                     cleanSession: true,
@@ -142,7 +174,7 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
                          * Fired on MQTT connection failures
                          *
                          * @event failure
-                         * @param {object} contains errorCode and errorMessage
+                         * @param {{ errorCode: (string), errorMessage: (string) }}
                          */
                         that.dispatchEvent(new CustomEvent('failure', {
                             detail: {errorCode: err.errorCode, errorMessage: err.errorMessage},
@@ -154,42 +186,44 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
                 };
 
                 if (typeof this.willTopic !== 'undefined') {
-                    connectOptions.willMessage = new Paho.MQTT.Message(String(this.willPayload));
-                    connectOptions.willMessage.destinationName = this.willTopic;
-                    connectOptions.willMessage.retained = Booelan(this.willRetain);
+                    this.__connectOptions.willMessage = new Paho.MQTT.Message(String(this.willPayload));
+                    this.__connectOptions.willMessage.destinationName = this.willTopic;
+                    this.__connectOptions.willMessage.retained = Boolean(this.willRetain);
                 }
 
-                const connect = () => {
-                    this.__mqttClient.connect(connectOptions);
-                };
+                this.__mqttClient = new Paho.MQTT.Client(this.host, this.port, this.clientId + clientIdSuffix);
 
-                connect();
-
-                this.__mqttClient.onConnectionLost = responseObject => {
+                this.__mqttClient.onConnectionLost = () => {
                     that._setConnected(false);
-                    setTimeout(connect, this.reconnectInterval);
+                    setTimeout(this.connect, this.reconnectInterval);
                 };
 
                 this.__mqttClient.onMessageArrived = msg => {
-                    Object.keys(that.__subscriptions).forEach(topic => {
-                        if (topic === msg.destinationName) {
-                            Object.keys(that.__subscriptions[topic]).forEach(id => {
-                                const callback = that.__subscriptions[topic][id].callback;
+                    Object.keys(this.__subscriptions).forEach(topic => {
+                        if (this.__mqttMatch(msg.destinationName, topic)) {
+                            Object.keys(this.__subscriptions[topic]).forEach(id => {
+                                const callback = this.__subscriptions[topic][id].callback;
                                 callback(msg.payloadString);
                             });
                         }
                     });
                 };
+
+                this.__mqttClient.connect(this.__connectOptions);
             }
 
             /**
+             * Publish a MQTT message.
              *
-             * @param topic
-             * @param payload
-             * @param options
-             * @param callback
+             * @param {string} topic
+             * @param {string} payload
+             * @param {{ retain: (boolean|undefined), qos: (number|undefined) }=}
+             *  options Object specifying options.  These may include:
+             *
+             *  * `retain` (boolean, defaults to `false`),
+             *  * `qos` (number, defaults to `0`)
              */
-            publish(topic, payload, options, callback) {
+            publish(topic, payload, options) {
                 if (typeof options === 'function') {
                     callback = options;
                     options = {};
@@ -203,13 +237,6 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
                         payload = String(payload);
                     }
                     this.__mqttClient.send(topic, payload, parseInt(options.qos, 10) || 0, Boolean(options.retain));
-                    if (typeof callback === 'function') {
-                        callback(null);
-                    }
-                } else {
-                    if (typeof callback === 'function') {
-                        callback(new Error('not connected'));
-                    }
                 }
             }
 
@@ -238,12 +265,12 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
              *
              *  @param {subscriptionId} subscriptionId
              */
-            unsubscribe(subscription) {
-                if (this.__subscriptions[subscription.topic]) {
-                    delete this.__subscriptions[subscription.topic]['s' + subscription.id];
-                    if (Object.keys(this.__subscriptions[subscription.topic]).length === 0) {
-                        this.__mqttClient.unsubscribe(subscription.topic);
-                        delete this.__subscriptions[subscription.topic];
+            unsubscribe(subscriptionId) {
+                if (this.__subscriptions[subscriptionId.topic]) {
+                    delete this.__subscriptions[subscriptionId.topic]['s' + subscriptionId.id];
+                    if (Object.keys(this.__subscriptions[subscriptionId.topic]).length === 0) {
+                        this.__mqttClient.unsubscribe(subscriptionId.topic);
+                        delete this.__subscriptions[subscriptionId.topic];
                     }
                 }
             }
