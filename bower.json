@@ -1,6 +1,6 @@
 {
   "name": "mqtt-connection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "authors": [
     "Sebastian Raff <hq@ccu.io>"
   ],
