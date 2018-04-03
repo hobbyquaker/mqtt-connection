@@ -2,7 +2,7 @@
   "name": "mqtt-connection",
   "version": "1.0.1",
   "authors": [
-    "Sebastian Raff <hq@ccu.io>"
+    "Sebastian Raff <hobbyquaker@gmail.com>"
   ],
   "description": "Polymer Element that connects to a MQTT broker",
   "main": "mqtt-connection.html",
