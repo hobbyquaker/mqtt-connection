@@ -1,0 +1,22 @@
+{
+  "name": "@hobbyquaker/mqtt-connection",
+  "flat": true,
+  "version": "3.0.0",
+  "description": "Polymer Element that connects to a MQTT broker",
+  "contributors": [
+    "Sebastian Raff <hobbyquaker@gmail.com>"
+  ],
+  "keywords": [
+    "web-component",
+    "web-components",
+    "polymer",
+    "mqtt"
+  ],
+  "main": "mqtt-connection.html",
+  "license": "MIT",
+  "homepage": "https://github.com/hobbyquaker/mqtt-connection",
+  "dependencies": {
+    "@polymer/polymer": "^3.0.0"
+  },
+  "devDependencies": {}
+}
