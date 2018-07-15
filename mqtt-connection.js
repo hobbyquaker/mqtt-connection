@@ -4,30 +4,30 @@ import { PolymerElement } from '../../@polymer/polymer/polymer-element.js';
 import { Paho } from './paho.mqtt.javascript/paho-mqtt.js';
 
 /**
-@license
-Copyright 2017 Sebastian Raff <hq@ccu.io> https://github.com/hobbyquaker
+ @license
+ Copyright 2017 Sebastian Raff <hq@ccu.io> https://github.com/hobbyquaker
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
-rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+ persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
-Software.
+ The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 /**
-`mqtt-connection` Creates a Connection to the MQTT Broker. Automatically (re)connects and handles
-subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
+ `mqtt-connection` Creates a Connection to the MQTT Broker. Automatically (re)connects and handles
+ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
 
-@customElement
-@element mqtt-connection
-@polymer
-*/
+ @customElement
+ @element mqtt-connection
+ @polymer
+ */
 class MqttConnection extends PolymerElement {
     static get is() { return 'mqtt-connection'; }
     static get properties() {
@@ -98,11 +98,11 @@ class MqttConnection extends PolymerElement {
              */
 
             /**
-             *  Seconds to wait between connection retries.
+             *  Seconds to wait between connection checks.
              */
             reconnectInterval: {
                 type: Number,
-                value: 1
+                value: 3
             },
             /**
              * Topic for the Last-Will/Testament action (published by the broker after this client disconnected).
@@ -153,22 +153,20 @@ class MqttConnection extends PolymerElement {
     }
 
     init() {
-        const that = this;
-
         this.__subscriptions = {};
         this.__subscriptionId = 0;
         const clientIdSuffix = '_' + ('00000000' + Math.floor(Math.random() * 0xffffffff).toString(16)).slice(-8);
 
         this.__connectOptions = {
-            userName: that.username,
-            password: that.password,
+            userName: this.username,
+            password: this.password,
             cleanSession: true,
-            useSSL: that.protocol === 'wss',
-            keepAliveInterval: that.keepAliveInterval,
+            useSSL: this.protocol === 'wss',
+            keepAliveInterval: this.keepAliveInterval,
             onSuccess: () => {
                 this._setConnected(true);
 
-                Object.keys(that.__subscriptions).forEach(topic => {
+                Object.keys(this.__subscriptions).forEach(topic => {
                     this.__mqttClient.subscribe(topic);
                 });
                 this.dispatchEvent(new CustomEvent('connect'))
@@ -181,12 +179,11 @@ class MqttConnection extends PolymerElement {
                  * @event failure
                  * @param {{ errorCode: (string), errorMessage: (string) }}
                  */
-                that.dispatchEvent(new CustomEvent('failure', {
+                this.dispatchEvent(new CustomEvent('failure', {
                     detail: {errorCode: err.errorCode, errorMessage: err.errorMessage},
                     bubbles: true,
                     composed: true
                 }));
-                setTimeout(connect, that.reconnectInterval * 1000);
             }
         };
 
@@ -198,9 +195,13 @@ class MqttConnection extends PolymerElement {
 
         this.__mqttClient = new Paho.MQTT.Client(this.host, this.port, this.clientId + clientIdSuffix);
 
-        this.__mqttClient.onConnectionLost = () => {
-            that._setConnected(false);
-            setTimeout(this.connect, this.reconnectInterval);
+        this.__mqttClient.onConnectionLost = err => {
+            this._setConnected(false);
+            this.dispatchEvent(new CustomEvent('connection-lost', {
+                detail: {errorCode: err.errorCode, errorMessage: err.errorMessage},
+                bubbles: true,
+                composed: true
+            }));
         };
 
         this.__mqttClient.onMessageArrived = msg => {
@@ -213,8 +214,14 @@ class MqttConnection extends PolymerElement {
                 }
             });
         };
+        this.connect();
+    }
 
-        this.__mqttClient.connect(this.__connectOptions);
+    connect() {
+        setTimeout(() => {this.connect()}, this.reconnectInterval * 1000);
+        if (!this.connected) {
+            this.__mqttClient.connect(this.__connectOptions);
+        }
     }
 
     /**
