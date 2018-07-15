@@ -1,5 +1,8 @@
-import { Element } from '../../@polymer/polymer/polymer-element.js';
-import './paho.mqtt.javascript/1.0.4/paho-mqtt.js';
+
+
+import { PolymerElement } from '../../@polymer/polymer/polymer-element.js';
+import { Paho } from './paho.mqtt.javascript/paho-mqtt.js';
+
 /**
 @license
 Copyright 2017 Sebastian Raff <hq@ccu.io> https://github.com/hobbyquaker
@@ -25,7 +28,7 @@ subscriptions with callbacks. Uses the Eclipse Paho JavaScript client.
 @element mqtt-connection
 @polymer
 */
-class MqttConnection extends Element {
+class MqttConnection extends PolymerElement {
     static get is() { return 'mqtt-connection'; }
     static get properties() {
         return {
@@ -145,6 +148,11 @@ class MqttConnection extends Element {
 
     connectedCallback() {
         super.connectedCallback();
+        this.init();
+
+    }
+
+    init() {
         const that = this;
 
         this.__subscriptions = {};
@@ -158,11 +166,13 @@ class MqttConnection extends Element {
             useSSL: that.protocol === 'wss',
             keepAliveInterval: that.keepAliveInterval,
             onSuccess: () => {
-                that._setConnected(true);
+                this._setConnected(true);
 
                 Object.keys(that.__subscriptions).forEach(topic => {
                     this.__mqttClient.subscribe(topic);
                 });
+                this.dispatchEvent(new CustomEvent('connect'))
+
             },
             onFailure: (err) => {
                 /**
@@ -232,6 +242,8 @@ class MqttConnection extends Element {
                 payload = String(payload);
             }
             this.__mqttClient.send(topic, payload, parseInt(options.qos, 10) || 0, Boolean(options.retain));
+        } else {
+            console.error('can not publish, not connected to mqtt broker');
         }
     }
 
@@ -269,6 +281,7 @@ class MqttConnection extends Element {
             }
         }
     }
+
 }
 
 customElements.define(MqttConnection.is, MqttConnection);
