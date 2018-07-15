@@ -5,7 +5,7 @@ import { Paho } from './paho.mqtt.javascript/paho-mqtt.js';
 
 /**
  @license
- Copyright 2017 Sebastian Raff <hq@ccu.io> https://github.com/hobbyquaker
+ Copyright 2017 Sebastian Raff <hobbyquaker@gmail.com> https://github.com/hobbyquaker
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
  documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
