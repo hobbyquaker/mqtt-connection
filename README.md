@@ -18,4 +18,4 @@ see https://www.webcomponents.org/element/hobbyquaker/mqtt-connection/elements/m
 MIT (c) Sebastian Raff
 
 [shield-license]: https://img.shields.io/badge/license-MIT-blue.svg "License: MIT"
-[shield-polymer]: https://img.shields.io/badge/polymer%20version-2.0-blue.svg "Polymer Version: 2.0"
+[shield-polymer]: https://img.shields.io/badge/polymer%20version-3.0-blue.svg "Polymer Version: 3.0"
