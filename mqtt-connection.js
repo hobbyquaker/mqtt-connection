@@ -1,11 +1,9 @@
-
-
 import { PolymerElement } from '../../@polymer/polymer/polymer-element.js';
 import { Paho } from './paho.mqtt.javascript/paho-mqtt.js';
 
 /**
  @license
- Copyright 2017 Sebastian Raff <hobbyquaker@gmail.com> https://github.com/hobbyquaker
+ Copyright 2017, 2018 Sebastian Raff <hobbyquaker@gmail.com> https://github.com/hobbyquaker
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
  documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
@@ -197,7 +195,14 @@ class MqttConnection extends PolymerElement {
 
         this.__mqttClient.onConnectionLost = err => {
             this._setConnected(false);
-            this.dispatchEvent(new CustomEvent('connection-lost', {
+            err = err || {};
+            /**
+             * Fired on MQTT connection loss
+             *
+             * @event connection-loss
+             * @param {{ errorCode: (string), errorMessage: (string) }}
+             */
+            this.dispatchEvent(new CustomEvent('connection-loss', {
                 detail: {errorCode: err.errorCode, errorMessage: err.errorMessage},
                 bubbles: true,
                 composed: true
@@ -209,16 +214,31 @@ class MqttConnection extends PolymerElement {
                 if (this.__mqttMatch(msg.destinationName, topic)) {
                     Object.keys(this.__subscriptions[topic]).forEach(id => {
                         const callback = this.__subscriptions[topic][id].callback;
-                        callback(msg.payloadString);
+                        if (typeof callback === 'function') {
+                            callback(msg.payloadString);
+                        }
                     });
                 }
             });
         };
-        this.connect();
+        this.__connect();
+
+        /**
+         * Fired when mqtt-connection element is ready
+         *
+         * @event connection-loss
+         * @param {}
+         */
+        this.dispatchEvent(new CustomEvent('ready', {
+            detail: {},
+            bubbles: true,
+            composed: true
+        }));
+
     }
 
-    connect() {
-        setTimeout(() => {this.connect()}, this.reconnectInterval * 1000);
+    __connect() {
+        setTimeout(() => {this.__connect()}, this.reconnectInterval * 1000);
         if (!this.connected) {
             this.__mqttClient.connect(this.__connectOptions);
         }
@@ -236,22 +256,15 @@ class MqttConnection extends PolymerElement {
      *  * `qos` (number, defaults to `0`)
      */
     publish(topic, payload, options) {
-        if (typeof options === 'function') {
-            callback = options;
-            options = {};
-        } else if (typeof options !== 'object') {
-            options = {}
-        }
+        options = options || {};
         if (this.connected) {
-            if (typeof payload === 'object') {
+            if (typeof payload !== 'string') {
                 payload = JSON.stringify(payload);
-            } else if (typeof payload !== 'string') {
-                payload = String(payload);
             }
             this.__mqttClient.send(topic, payload, parseInt(options.qos, 10) || 0, Boolean(options.retain));
-        } else {
-            console.error('can not publish, not connected to mqtt broker');
+            return true;
         }
+        return false;
     }
 
     /**
