@@ -10,7 +10,7 @@ Uses the Eclipse Paho JavaScript client.
 
 ## Documentation
 
-see https://www.webcomponents.org/element/hobbyquaker/mqtt-connection/elements/mqtt-connection
+see https://www.webcomponents.org/element/@hobbyquaker/mqtt-connection/elements/mqtt-connection
 
 
 ## License
