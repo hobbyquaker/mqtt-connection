@@ -226,7 +226,7 @@ class MqttConnection extends PolymerElement {
         /**
          * Fired when mqtt-connection element is ready
          *
-         * @event connection-loss
+         * @event ready
          * @param {}
          */
         this.dispatchEvent(new CustomEvent('ready', {
